@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Космический защитник | GitHub Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        :root {
+            --space-dark: #0f172a;
+            --space-blue: #1e40af;
+            --space-light: #93c5fd;
+            --player-color: #3b82f6;
+            --enemy-color: #ef4444;
+            --powerup-color: #10b981;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: var(--space-dark);
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+        }
+
+        #player {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: var(--player-color);
+            border-radius: 50%;
+            box-shadow: 0 0 20px var(--player-color);
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: transform 0.1s ease-out;
+        }
+
+        #player::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: var(--space-light);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.3;
+        }
+
+        .asteroid {
+            position: absolute;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+
+        .bullet {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background-color: var(--space-light);
+            border-radius: 50%;
+            box-shadow: 0 0 10px 2px var(--space-light);
+            transform: translate(-50%, -50%);
+            z-index: 8;
+        }
+
+        .explosion {
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(circle, #f59e0b, #ef4444);
+            box-shadow: 0 0 20px #f59e0b;
+            transform: translate(-50%, -50%);
+            z-index: 9;
+            opacity: 0.8;
+            animation: explode 0.5s forwards;
+        }
+
+        .powerup {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: var(--powerup-color);
+            box-shadow: 0 0 10px var(--powerup-color);
+            transform: translate(-50%, -50%);
+            z-index: 7;
+            animation: pulse 1.5s infinite;
+        }
+
+        #base {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 20px;
+            background-color: var(--space-blue);
+            border-radius: 10px;
+            box-shadow: 0 0 20px var(--space-blue);
+            z-index: 6;
+        }
+
+        #baseHealth {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 10px;
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #baseHealthBar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+            transition: width 0.3s;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 20;
+        }
+
+        #score {
+            font-size: 20px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px white;
+        }
+
+        #level {
+            font-size: 16px;
+            color: var(--space-light);
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            display: none;
+        }
+
+        #gameOver h1 {
+            font-size: 40px;
+            color: #ef4444;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px #ef4444;
+        }
+
+        #finalScore {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            background-color: var(--space-blue);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px var(--space-blue);
+        }
+
+        .btn:hover {
+            background-color: var(--player-color);
+            transform: scale(1.05);
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 40;
+        }
+
+        #startScreen h1 {
+            font-size: 40px;
+            color: var(--space-light);
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px var(--space-light);
+            animation: titleGlow 2s infinite;
+        }
+
+        #instructions {
+            text-align: center;
+            max-width: 500px;
+            margin-bottom: 40px;
+            line-height: 1.6;
+            color: #93c5fd;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background-color: white;
+            border-radius: 50%;
+            animation: twinkle 5s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes explode {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { text-shadow: 0 0 10px var(--space-light); }
+            50% { text-shadow: 0 0 20px var(--space-light), 0 0 30px var(--space-blue); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="player"></div>
+        <div id="base"></div>
+        <div id="baseHealth"><div id="baseHealthBar"></div></div>
+
+        <div id="ui">
+            <div id="score">Очки: 0</div>
+            <div id="level">Уровень: 1</div>
+        </div>
+
+        <div id="gameOver">
+            <h1>ИГРА ОКОНЧЕНА!</h1>
+            <div id="finalScore">Ваш счет: 0</div>
+            <button class="btn" id="restartBtn">Играть снова</button>
+        </div>
+
+        <div id="startScreen">
+            <h1>КОСМИЧЕСКИЙ ЗАЩИТНИК</h1>
+            <div id="instructions">
+                Защищайте базу от астероидов!<br>
+                Управление: мышью или касанием экрана<br>
+                Стрельба: клик/касание<br>
+                Соберите бонусы для улучшения оружия<br>
+                Удерживайте базу как можно дольше!
+            </div>
+            <button class="btn" id="startBtn">Начать игру</button>
+        </div>
+    </div>
+
+    <script>
+        // Game elements
+        const gameContainer = document.getElementById('gameContainer');
+        const player = document.getElementById('player');
+        const base = document.getElementById('base');
+        const baseHealthBar = document.getElementById('baseHealthBar');
+        const scoreElement = document.getElementById('score');
+        const levelElement = document.getElementById('level');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreElement = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+        const startScreen = document.getElementById('startScreen');
+        const startBtn = document.getElementById('startBtn');
+
+        // Game state
+        let gameRunning = false;
+        let score = 0;
+        let level = 1;
+        let baseHealth = 100;
+        let playerX = window.innerWidth / 2;
+        let playerY = window.innerHeight / 2;
+        let asteroids = [];
+        let bullets = [];
+        let explosions = [];
+        let powerups = [];
+        let lastShotTime = 0;
+        let fireRate = 300; // ms between shots
+        let bulletSpeed = 10;
+        let asteroidSpawnRate = 1000; // ms between spawns
+        let lastAsteroidSpawn = 0;
+        let gameTime = 0;
+        let levelUpScore = 1000;
+        let stars = [];
+
+        // Create stars background
+        function createStars() {
+            const starCount = 200;
+
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+
+                // Random properties
+                const size = Math.random() * 2 + 1;
+                const posX = Math.random() * window.innerWidth;
+                const posY = Math.random() * window.innerHeight;
+                const delay = Math.random() * 5;
+                const duration = Math.random() * 5 + 3;
+                const opacity = Math.random() * 0.8 + 0.2;
+
+                // Apply properties
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${posX}px`;
+                star.style.top = `${posY}px`;
+                star.style.opacity = opacity;
+                star.style.animationDuration = `${duration}s`;
+                star.style.animationDelay = `${delay}s`;
+
+                gameContainer.appendChild(star);
+                stars.push(star);
+            }
+        }
+
+        // Initialize game
+        function initGame() {
+            // Reset game state
+            score = 0;
+            level = 1;
+            baseHealth = 100;
+            playerX = window.innerWidth / 2;
+            playerY = window.innerHeight / 2;
+            asteroids = [];
+            bullets = [];
+            explosions = [];
+            powerups = [];
+            lastShotTime = 0;
+            fireRate = 300;
+            bulletSpeed = 10;
+            asteroidSpawnRate = 1000;
+            lastAsteroidSpawn = 0;
+            gameTime = 0;
+            levelUpScore = 1000;
+
+            // Update UI
+            updateScore();
+            updateLevel();
+            updateBaseHealth();
+
+            // Clear all game elements
+            document.querySelectorAll('.asteroid, .bullet, .explosion, .powerup').forEach(el => el.remove());
+
+            // Position player
+            player.style.left = `${playerX}px`;
+            player.style.top = `${playerY}px`;
+
+            // Hide game over screen
+            gameOverScreen.style.display = 'none';
+
+            // Start game loop
+            gameRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Game loop
+        function gameLoop(timestamp) {
+            if (!gameRunning) return;
+
+            gameTime = timestamp;
+
+            // Spawn asteroids
+            if (timestamp - lastAsteroidSpawn > asteroidSpawnRate) {
+                spawnAsteroid();
+                lastAsteroidSpawn = timestamp;
+            }
+
+            // Update player position
+            player.style.left = `${playerX}px`;
+            player.style.top = `${playerY}px`;
+
+            // Update bullets
+            updateBullets();
+
+            // Update asteroids
+            updateAsteroids();
+
+            // Update powerups
+            updatePowerups();
+
+            // Check collisions
+            checkCollisions();
+
+            // Level up
+            if (score >= level * levelUpScore) {
+                levelUp();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Spawn a new asteroid
+        function spawnAsteroid() {
+            const asteroid = document.createElement('div');
+            asteroid.classList.add('asteroid');
+
+            // Random properties
+            const size = Math.random() * 40 + 20;
+            const speed = Math.random() * 3 + 1 * level;
+            let x, y;
+
+            // Spawn from top or sides
+            if (Math.random() > 0.5) {
+                x = Math.random() * window.innerWidth;
+                y = -size;
+            } else {
+                x = Math.random() > 0.5 ? -size : window.innerWidth + size;
+                y = Math.random() * window.innerHeight;
+            }
+
+            // Set asteroid properties
+            asteroid.style.width = `${size}px`;
+            asteroid.style.height = `${size}px`;
+            asteroid.style.left = `${x}px`;
+            asteroid.style.top = `${y}px`;
+
+            // Add to DOM and array
+            gameContainer.appendChild(asteroid);
+            asteroids.push({
+                element: asteroid,
+                x: x,
+                y: y,
+                size: size,
+                speed: speed,
+                vx: (window.innerWidth/2 - x) / (window.innerHeight * 0.8) * speed,
+                vy: (window.innerHeight - y) / (window.innerHeight * 0.8) * speed
+            });
+        }
+
+        // Update all bullets
+        function updateBullets() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.y -= bulletSpeed;
+                bullet.element.style.top = `${bullet.y}px`;
+
+                // Remove if off screen
+                if (bullet.y < -10) {
+                    bullet.element.remove();
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
+        // Update all asteroids
+        function updateAsteroids() {
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                const asteroid = asteroids[i];
+                asteroid.x += asteroid.vx;
+                asteroid.y += asteroid.vy;
+                asteroid.element.style.left = `${asteroid.x}px`;
+                asteroid.element.style.top = `${asteroid.y}px`;
+
+                // Remove if off screen (except bottom)
+                if (asteroid.x < -asteroid.size * 2 ||
+                    asteroid.x > window.innerWidth + asteroid.size * 2 ||
+                    asteroid.y > window.innerHeight + asteroid.size * 2) {
+                    asteroid.element.remove();
+                    asteroids.splice(i, 1);
+                }
+
+                // Check if hit base
+                if (asteroid.y + asteroid.size > window.innerHeight - 30) {
+                    const baseLeft = window.innerWidth/2 - 50;
+                    const baseRight = window.innerWidth/2 + 50;
+
+                    if (asteroid.x > baseLeft && asteroid.x < baseRight) {
+                        // Base hit
+                        baseHealth -= asteroid.size / 5;
+                        updateBaseHealth();
+
+                        // Create explosion
+                        createExplosion(asteroid.x, window.innerHeight - 30, asteroid.size);
+
+                        // Remove asteroid
+                        asteroid.element.remove();
+                        asteroids.splice(i, 1);
+
+                        // Game over if base destroyed
+                        if (baseHealth <= 0) {
+                            gameOver();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update all powerups
+        function updatePowerups() {
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const powerup = powerups[i];
+                powerup.y += 2;
+                powerup.element.style.top = `${powerup.y}px`;
+
+                // Remove if off screen
+                if (powerup.y > window.innerHeight + 20) {
+                    powerup.element.remove();
+                    powerups.splice(i, 1);
+                }
+            }
+        }
+
+        // Check all collisions
+        function checkCollisions() {
+            // Bullet-asteroid collisions
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+
+                for (let j = asteroids.length - 1; j >= 0; j--) {
+                    const asteroid = asteroids[j];
+
+                    const dx = bullet.x - asteroid.x;
+                    const dy = bullet.y - asteroid.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < asteroid.size / 2) {
+                        // Hit!
+                        score += Math.floor(asteroid.size);
+                        updateScore();
+
+                        // Create explosion
+                        createExplosion(asteroid.x, asteroid.y, asteroid.size);
+
+                        // Chance to spawn powerup
+                        if (Math.random() < 0.2) {
+                            spawnPowerup(asteroid.x, asteroid.y);
+                        }
+
+                        // Remove both
+                        bullet.element.remove();
+                        bullets.splice(i, 1);
+
+                        asteroid.element.remove();
+                        asteroids.splice(j, 1);
+
+                        break;
+                    }
+                }
+            }
+
+            // Player-powerup collisions
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const powerup = powerups[i];
+
+                const dx = playerX - powerup.x;
+                const dy = playerY - powerup.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 25) {
+                    // Collected!
+                    powerup.element.remove();
+                    powerups.splice(i, 1);
+
+                    // Apply powerup effect
+                    fireRate = Math.max(100, fireRate - 50); // Increase fire rate
+                    bulletSpeed += 1; // Increase bullet speed
+
+                    // Visual feedback
+                    player.style.boxShadow = `0 0 30px ${powerup.element.style.backgroundColor}`;
+                    setTimeout(() => {
+                        player.style.boxShadow = `0 0 20px var(--player-color)`;
+                    }, 300);
+                }
+            }
+        }
+
+        // Create an explosion
+        function createExplosion(x, y, size) {
+            const explosion = document.createElement('div');
+            explosion.classList.add('explosion');
+
+            explosion.style.left = `${x}px`;
+            explosion.style.top = `${y}px`;
+            explosion.style.width = `${size}px`;
+            explosion.style.height = `${size}px`;
+
+            gameContainer.appendChild(explosion);
+            explosions.push(explosion);
+
+            // Remove after animation
+            setTimeout(() => {
+                explosion.remove();
+                explosions.splice(explosions.indexOf(explosion), 1);
+            }, 500);
+        }
+
+        // Spawn a powerup
+        function spawnPowerup(x, y) {
+            const powerup = document.createElement('div');
+            powerup.classList.add('powerup');
+
+            // Random powerup type
+            const types = ['#10b981', '#3b82f6', '#f59e0b'];
+            const type = types[Math.floor(Math.random() * types.length)];
+
+            powerup.style.backgroundColor = type;
+            powerup.style.boxShadow = `0 0 10px ${type}`;
+            powerup.style.left = `${x}px`;
+            powerup.style.top = `${y}px`;
+
+            gameContainer.appendChild(powerup);
+            powerups.push({
+                element: powerup,
+                x: x,
+                y: y,
+                type: type
+            });
+        }
+
+        // Level up
+        function levelUp() {
+            level++;
+            updateLevel();
+
+            // Increase difficulty
+            asteroidSpawnRate = Math.max(200, asteroidSpawnRate - 100);
+
+            // Visual feedback
+            levelElement.style.transform = 'scale(1.5)';
+            levelElement.style.color = '#f59e0b';
+            setTimeout(() => {
+                levelElement.style.transform = 'scale(1)';
+                levelElement.style.color = 'var(--space-light)';
+            }, 500);
+        }
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            finalScoreElement.textContent = `Ваш счет: ${score}`;
+            gameOverScreen.style.display = 'flex';
+        }
+
+        // Update score display
+        function updateScore() {
+            scoreElement.textContent = `Очки: ${score}`;
+        }
+
+        // Update level display
+        function updateLevel() {
+            levelElement.textContent = `Уровень: ${level}`;
+        }
+
+        // Update base health display
+        function updateBaseHealth() {
+            baseHealthBar.style.width = `${baseHealth}%`;
+
+            // Visual feedback
+            if (baseHealth < 30) {
+                base.style.boxShadow = '0 0 20px #ef4444';
+                baseHealthBar.style.backgroundColor = '#ef4444';
+            } else if (baseHealth < 60) {
+                base.style.boxShadow = '0 0 20px #f59e0b';
+                baseHealthBar.style.backgroundColor = '#f59e0b';
+            } else {
+                base.style.boxShadow = '0 0 20px var(--space-blue)';
+                baseHealthBar.style.backgroundColor = '#10b981';
+            }
+        }
+
+        // Fire a bullet
+        function fireBullet() {
+            if (!gameRunning) return;
+
+            const now = Date.now();
+            if (now - lastShotTime < fireRate) return;
+
+            lastShotTime = now;
+
+            const bullet = document.createElement('div');
+            bullet.classList.add('bullet');
+
+            bullet.style.left = `${playerX}px`;
+            bullet.style.top = `${playerY - 25}px`;
+
+            gameContainer.appendChild(bullet);
+            bullets.push({
+                element: bullet,
+                x: playerX,
+                y: playerY - 25
+            });
+        }
+
+        // Event listeners
+        gameContainer.addEventListener('mousemove', (e) => {
+            playerX = e.clientX;
+            playerY = e.clientY;
+        });
+
+        gameContainer.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            playerX = e.touches[0].clientX;
+            playerY = e.touches[0].clientY;
+        }, { passive: false });
+
+        gameContainer.addEventListener('click', fireBullet);
+        gameContainer.addEventListener('touchstart', fireBullet);
+
+        restartBtn.addEventListener('click', initGame);
+
+        startBtn.addEventListener('click', () => {
+            startScreen.style.display = 'none';
+            createStars();
+            initGame();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (!gameRunning) return;
+
+            // Adjust player position
+            if (playerX > window.innerWidth) playerX = window.innerWidth;
+            if (playerY > window.innerHeight) playerY = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
